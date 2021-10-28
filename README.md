@@ -11,7 +11,7 @@ The data is transferred over Wi-Fi between the memory orb and the host device (e
 ```
 <component code>:<component number>:<value>
 ```
-The components send data only when their state change (e.g., a button is pressed or released, the knob of a rotary encoder is rotated).
+The components send data only when their state changes (e.g., a button is pressed or released, the knob of a rotary encoder is rotated).
 
 ### Component code
 Component code is a single character defining the type of the component:
@@ -35,3 +35,7 @@ Value change depending on the component.
 * `0-1024` (theoretically) for the potentiometers (`P`). It is slightly less for the slide and even less for the circular since the rotation is limited to 180°.
 * `0-1` for the vibrating motors (`V`), with `1` for activated and `0` for inactivated.
 * `<x>:<y>:<z>` for the inertial measurement unit (`I`), with `x`, `y`, `z` as float.
+
+## Misc
+### Debounce
+The momentary switches includes a `50 milliseconds debouncing delay`, it includes the one integrated with the rotary encoders.

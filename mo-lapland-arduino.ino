@@ -3,12 +3,15 @@
  * the first one, therefore, starting at 4 up to 13 (for 10 buttons).
  */
 #define PIN_BUTTON_FIRST 4
+#define DEBOUNCE_DELAY 50
 
-bool buttonPressed[10];
+bool buttonState[10];
+bool buttonLastState[10];
+unsigned long buttonLastDebounceTime[10];
 
 void setup() {
   for (int i = 0; i < 10; i++) {
-    buttonPressed[i] = true; // init the state of the button as unpressed (true)
+    buttonState[i] = true; // init the state of the button as unpressed (true)
     pinMode(i + PIN_BUTTON_FIRST, INPUT_PULLUP);
   }
 
@@ -18,10 +21,20 @@ void setup() {
 void loop() {
   for (int i = 0; i < 10; i++) {
     bool b = digitalRead(i + PIN_BUTTON_FIRST);
-    if (b != buttonPressed[i]) {
-      buttonPressed[i] = b;
-      printFormatedData('B', i+PIN_BUTTON_FIRST, b);
+    
+    if (b != buttonLastState[i]) {
+      buttonLastDebounceTime[i] = millis();
     }
+    
+    if ((millis() - buttonLastDebounceTime[i]) > DEBOUNCE_DELAY) {
+      if (b != buttonState[i]) {
+        buttonState[i] = b;
+        
+        printFormatedData('B', i+PIN_BUTTON_FIRST, b);
+      }
+    }
+    
+    buttonLastState[i] = b;
   }
 }
 
