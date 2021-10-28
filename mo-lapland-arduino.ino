@@ -1,40 +1,45 @@
 #include <WiFiNINA.h>
 
-/* 
- * We just define the first pin number, all the other button pins follow 
- * the first one, therefore, starting at 4 up to 13 (for 10 buttons).
- */
-#define PIN_BUTTON_FIRST  4
-#define DEBOUNCE_DELAY    50
+#define DEBOUNCE_DELAY 50
 
-#define PIN_ROTARY_LEFT_DT   A3
-#define PIN_ROTARY_LEFT_CLK  A4
-#define PIN_ROTARY_RIGHT_DT  A6
-#define PIN_ROTARY_RIGHT_CLK A5
+/*
+   We just define the first pin number, all the other button pins follow
+   the first one, therefore, starting at 4 up to 13 (for 10 buttons).
+*/
+#define PIN_BUTTON_FIRST 4
 
-bool buttonState[10];
-bool buttonLastState[10];
-unsigned long buttonLastDebounceTime[10];
+/*
+  We just define the pins for one rotary encoder and increment (+1) for the second,
+  therefore, 0, A2 and A4 will be 1, A3 and A5
+*/
+#define PIN_ROTARY_CLK 16 // A2
+#define PIN_ROTARY_DT  18 // A4
+#define PIN_ROTARY_SW  0 // TX
 
-int rotaryLeftStateCLK;
-int rotaryLeftLastStateCLK;
-int rotaryRightStateCLK;
-int rotaryRightLastStateCLK;
+/*
+   10 individual buttons (momentary switches) and 2 integrated with the rotary encoders.
+*/
+bool buttonState[12];
+bool buttonLastState[12];
+unsigned long buttonLastDebounceTime[12];
+
+int rotaryLastStateCLK[2];
 
 void setup() {
   // Init buttons
+  // we stop at 9, because 10 and 11 are reserved for the buttons for the rotary encoders
   for (int i = 0; i < 10; i++) {
     buttonState[i] = true; // init the state of the button as unpressed (true)
     pinMode(i + PIN_BUTTON_FIRST, INPUT_PULLUP);
   }
 
   // Init rotary encoders
-  pinMode(PIN_ROTARY_LEFT_CLK, INPUT);
-  pinMode(PIN_ROTARY_LEFT_DT, INPUT);
-  pinMode(PIN_ROTARY_RIGHT_CLK, INPUT);
-  pinMode(PIN_ROTARY_RIGHT_DT, INPUT);
-  rotaryLeftLastStateCLK = digitalRead(PIN_ROTARY_LEFT_CLK);
-  rotaryRightLastStateCLK = digitalRead(PIN_ROTARY_RIGHT_CLK);
+  for (int i = 0; i < 2; i++) {
+    pinMode(PIN_ROTARY_SW + i, INPUT_PULLUP);
+    pinMode(PIN_ROTARY_CLK + i, INPUT);
+    pinMode(PIN_ROTARY_DT + i, INPUT);
+    rotaryLastStateCLK[i] = digitalRead(PIN_ROTARY_CLK + i);
+  }
 
   // Init serial
   Serial.begin(9600);
@@ -44,34 +49,39 @@ void loop() {
   // Buttons
   for (int i = 0; i < 10; i++) {
     bool b = digitalRead(i + PIN_BUTTON_FIRST);
-    
     if (b != buttonLastState[i]) {
       buttonLastDebounceTime[i] = millis();
     }
-    
     if ((millis() - buttonLastDebounceTime[i]) > DEBOUNCE_DELAY) {
       if (b != buttonState[i]) {
         buttonState[i] = b;
-        
-        printFormatedData('B', i+PIN_BUTTON_FIRST, b);
+        printFormatedData('B', i, b);
       }
     }
-    
     buttonLastState[i] = b;
   }
 
   // Rotary encoders
-  rotaryLeftStateCLK = digitalRead(PIN_ROTARY_LEFT_CLK);
-  if (rotaryLeftStateCLK != rotaryLeftLastStateCLK) {
-    printFormatedData('R', 0, (digitalRead(PIN_ROTARY_LEFT_DT) != rotaryLeftStateCLK)); 
-  }
-  rotaryLeftLastStateCLK = rotaryLeftStateCLK;
+  for (int i = 0; i < 2; i++) {
+    bool b = digitalRead(PIN_ROTARY_CLK + i);
+    if (b != rotaryLastStateCLK[i]) {
+      printFormatedData('R', i, (digitalRead(PIN_ROTARY_DT + i) != b));
+    }
+    rotaryLastStateCLK[i] = b;
 
-  rotaryRightStateCLK = digitalRead(PIN_ROTARY_RIGHT_CLK);
-  if (rotaryRightStateCLK != rotaryRightLastStateCLK) {
-    printFormatedData('R', 1, (digitalRead(PIN_ROTARY_RIGHT_DT) != rotaryRightStateCLK)); 
+    // integrated button
+    bool b2 = digitalRead(PIN_ROTARY_SW + i);
+    if (b2 != buttonLastState[i + 10]) {
+      buttonLastDebounceTime[i + 10] = millis();
+    }
+    if ((millis() - buttonLastDebounceTime[i + 10]) > DEBOUNCE_DELAY) {
+      if (b2 != buttonState[i + 10]) {
+        buttonState[i + 10] = b2;
+        printFormatedData('B', i + 10, b2);
+      }
+    }
+    buttonLastState[i + 10] = b2;
   }
-  rotaryRightLastStateCLK = rotaryRightStateCLK;
 }
 
 void printFormatedData(char componentCode, int componentNumber, bool value) {

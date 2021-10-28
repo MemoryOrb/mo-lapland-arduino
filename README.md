@@ -9,8 +9,17 @@ The memory orb uses an [Arduino Nano RP2040 Connect](https://docs.arduino.cc/har
 ## Protocol
 The data is transferred over Wi-Fi between the memory orb and the host device (e.g., a mixed reality headset) following a simple protocol:
 ```
-<component code>:<component number>:<value>
+<component code>:<component number>:<value>;
 ```
+
+Examples:
+
+```
+B:7:0;
+B:11:1;
+R:1:1;
+```
+
 The components send data only when their state changes (e.g., a button is pressed or released, the knob of a rotary encoder is rotated).
 
 ### Component code
@@ -23,7 +32,7 @@ Component code is a single character defining the type of the component:
 
 ### Component number
 Component number is an integer:
-* `0-9` for the buttons (`B`), 0-4 for the left side and 5-9 for the right side. The numbers of the button are affected following the disposition of the fingers when the hands' palms are facing down. `0` is affected to button dedicated to the little finger of the left hand, while `9` to the button dedicated to the little finger of the right hand.
+* `0-11` for the buttons (`B`), `0-9` for the individual buttons, `0-4` for the left side and `5-9` for the right side. The numbers of the button are affected following the disposition of the fingers when the hands' palms are facing down. `0` is affected to button dedicated to the little finger of the left hand, while `9` to the button dedicated to the little finger of the right hand. `10` and `11` are reserved for the switches integrated to the rotary encoders, respectively left and right.
 * `0-1` for the rotary encoders (`R`), and vibrating motors (`V`), with `0` for the left side and `1` for the right side.
 * `0-1` for the potentiometers (`P`), with `0` for the slide and `1` for the circular.
 * `0-1` for the inertial measurement unit (`I`), with `0` for the gyroscope and `1` for the accelerometer.
