@@ -18,9 +18,10 @@ Examples:
 B:7:0;
 B:11:1;
 R:1:1;
+P:0:87;
 ```
 
-The components send data only when their state changes (e.g., a button is pressed or released, the knob of a rotary encoder is rotated).
+The components send data `only` when their state changes (e.g., a button is pressed or released, the knob of a rotary encoder is rotated).
 
 ### Component code
 Component code is a single character defining the type of the component:
@@ -41,7 +42,7 @@ Component number is an integer:
 Value change depending on the component.
 * `0-1` for the buttons (`B`), with `0` meaning the button is pressed, and `1` the button is released.
 * `0-1` for the rotary encoders (`R`), with `0` meaning the rotation is counter-clockwise and `1` clockwise.
-* `0-1024` (theoretically) for the potentiometers (`P`). It is slightly less for the slide and even less for the circular since the rotation is limited to 180°.
+* `0-99` (theoretically) for the potentiometers (`P`). It is slightly less for the circular since the rotation is limited to 180°. Warning, the circular potentiometer is linear, while the slide potentiometer is logarithmic.
 * `0-1` for the vibrating motors (`V`), with `1` for activated and `0` for inactivated.
 * `<x>:<y>:<z>` for the inertial measurement unit (`I`), with `x`, `y`, `z` as float.
 
