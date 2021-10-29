@@ -1,4 +1,6 @@
 # Lapland Memory Orb - Arduino Code
+**v0.5** _(licence, todo and version added)_
+
 Arduino code for the memory orb made at the [University of Lapland](https://www.ulapland.fi/EN) and [Lapland University of Applied Sciences](https://www.lapinamk.fi/en) as part of the [Lapland Robotics](https://laplandrobotics.com) and [Digital Access to Sámi Heritage Archives](https://digisamiarchives.com) projects.
 
 Knowing this code can help debugging or customization, but it is not needed to use the memory orb, a plugin handling all the input/ouput was made for Unity.
@@ -49,3 +51,22 @@ Value change depending on the component.
 ## Misc
 ### Debounce
 The momentary switches includes a `50 milliseconds debouncing delay`, it includes the one integrated with the rotary encoders.
+
+## License
+```
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+```
+A permissive license whose main conditions require preservation of copyright and license notices. Contributors provide an express grant of patent rights. Licensed works, modifications, and larger works may be distributed under different terms and without source code.
+
+## TODO
+Network, vibrating motors and inertial measure unit remain to be implemented.
