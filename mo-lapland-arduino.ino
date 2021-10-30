@@ -1,4 +1,5 @@
 #include <WiFiNINA.h>
+#include "credentials.h"
 
 #define DEBOUNCE_DELAY 50
 
@@ -17,13 +18,13 @@
 #define PIN_ROTARY_SW  0 // TX
 
 /*
-  Same as rotary encoder, we just define one potentiometer and increment (+1) for 
+  Same as rotary encoder, we just define one potentiometer and increment (+1) for
   the other, therefore, 14 (A0) will be 15 (A1)
 */
 #define PIN_POTENTIOMETER 14 // A0
 
 /*
-  12, because 10 individual buttons (momentary switches) and 2 integrated 
+  12, because 10 individual buttons (momentary switches) and 2 integrated
   switches with the rotary encoders.
 */
 bool buttonState[12];
@@ -34,6 +35,21 @@ unsigned long buttonLastDebounceTime[12];
 int rotaryLastStateCLK[2];
 int potentiometerLastState[2];
 
+/*
+  Network, define custom SECRET_SSID, SECRET_PASS, IP1, IP2, IP3 and IP4 in credentials.h
+*/
+char ssid[] = SECRET_SSID;
+char pass[] = SECRET_PASS;
+IPAddress ipRemote(IP1, IP2, IP3, IP4);
+
+unsigned int localPort = 55666;
+int status = WL_IDLE_STATUS;
+WiFiClient client;
+
+String dataSend = String("");
+String dataReceived = String("");
+
+
 void setup() {
   /*
   ** Init buttons
@@ -41,7 +57,7 @@ void setup() {
   // we stop at 9, because 10 and 11 are reserved for the buttons for the rotary encoders
   for (int i = 0; i < 10; i++) {
     pinMode(PIN_BUTTON_FIRST + i, INPUT_PULLUP);
-    buttonState[i] = digitalRead(PIN_BUTTON_FIRST + i); 
+    buttonState[i] = digitalRead(PIN_BUTTON_FIRST + i);
   }
 
   /*
@@ -52,7 +68,7 @@ void setup() {
     pinMode(PIN_ROTARY_CLK + i, INPUT);
     pinMode(PIN_ROTARY_DT + i, INPUT);
     rotaryLastStateCLK[i] = digitalRead(PIN_ROTARY_CLK + i);
-    buttonState[i+10] = digitalRead(PIN_ROTARY_SW + i);
+    buttonState[i + 10] = digitalRead(PIN_ROTARY_SW + i);
   }
 
   /*
@@ -63,8 +79,31 @@ void setup() {
     potentiometerLastState[i] = analogRead(PIN_POTENTIOMETER + i) * 100 / 1024;
   }
 
-  // Init serial
+  /* 
+  ** Init serial 
+   */
   Serial.begin(9600);
+
+  /*
+  ** Init network
+   */
+  while (status != WL_CONNECTED) {
+    Serial.print("Attempting to connect to SSID: ");
+    Serial.println(ssid);
+    status = WiFi.begin(ssid, pass);
+    // wait 5 seconds for connection:
+    delay(5000);
+  }
+
+  // print WiFi's IP address:
+  Serial.print("IP Address: ");
+  Serial.println(WiFi.localIP());
+
+  if (client.connect(ipRemote, localPort)) {
+    dataSend = "c:" + ipToString(WiFi.localIP()) + ";\r";
+    client.print(dataSend);
+    Serial.println("Connected");
+  }
 }
 
 void loop() {
@@ -112,7 +151,7 @@ void loop() {
   /*
   ** Potentiometers
   */
-  for (int i = 0; i < 1; i++) {
+  for (int i = 0; i < 2; i++) {
     int v = analogRead(PIN_POTENTIOMETER + i) * 100 / 1024;
     if (v != potentiometerLastState[i]) {
       printFormatedData('P', i, v);
@@ -123,14 +162,24 @@ void loop() {
 
 void printFormatedData(char componentCode, int componentNumber, bool value) {
   printFormatedDataPrefix(componentCode, componentNumber);
+  
   Serial.print(value);
   Serial.println(";");
+  
+  dataSend.concat(value);
+  dataSend.concat(";\r");
+  client.print(dataSend);
 }
 
 void printFormatedData(char componentCode, int componentNumber, int value) {
   printFormatedDataPrefix(componentCode, componentNumber);
+  
   Serial.print(value);
   Serial.println(";");
+  
+  dataSend.concat(value);
+  dataSend.concat(";\r");
+  client.print(dataSend);
 }
 
 void printFormatedDataPrefix(char componentCode, int componentNumber) {
@@ -138,4 +187,14 @@ void printFormatedDataPrefix(char componentCode, int componentNumber) {
   Serial.print(":");
   Serial.print(componentNumber);
   Serial.print(":");
+
+  dataSend = "";
+  dataSend.concat(componentCode);
+  dataSend.concat(":");
+  dataSend.concat(componentNumber);
+  dataSend.concat(":");
+}
+
+String ipToString(const IPAddress& address) {
+  return String(address[0]) + "." + address[1] + "." + address[2] + "." + address[3];
 }
