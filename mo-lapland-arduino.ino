@@ -24,6 +24,11 @@
 #define PIN_POTENTIOMETER 14 // A0
 
 /*
+  Same as the potentiometer, we just define one vibrating motor and incremet (+1) for the other
+*/
+#define PIN_VIBRATING_MOTOR 2
+
+/*
   12, because 10 individual buttons (momentary switches) and 2 integrated
   switches with the rotary encoders.
 */
@@ -34,6 +39,9 @@ unsigned long buttonLastDebounceTime[12];
 
 int rotaryLastStateCLK[2];
 int potentiometerLastState[2];
+
+unsigned long vibratingMotorLastActivation[2];
+const float vibratingMaxPeriod = 5000.0f; // 5s
 
 /*
   Network, define custom SECRET_SSID, SECRET_PASS, IP1, IP2, IP3 and IP4 in credentials.h
@@ -79,14 +87,21 @@ void setup() {
     potentiometerLastState[i] = analogRead(PIN_POTENTIOMETER + i) * 100 / 1024;
   }
 
-  /* 
-  ** Init serial 
-   */
+  /*
+  ** Init vibrating motors
+  */
+  for (int i = 0; i < 2; i++) {
+    pinMode(PIN_VIBRATING_MOTOR + i, OUTPUT);
+  }
+
+  /*
+  ** Init serial
+  */
   Serial.begin(9600);
 
   /*
   ** Init network
-   */
+  */
   while (status != WL_CONNECTED) {
     Serial.print("Attempting to connect to SSID: ");
     Serial.println(ssid);
@@ -157,6 +172,32 @@ void loop() {
       printFormatedData('P', i, v);
     }
     potentiometerLastState[i] = v;
+  }
+
+  /*
+  ** Vibrating motors
+  */
+  if (client.available()) {
+    char c;
+    do {
+      c = client.read();
+      dataReceived += c;
+      if (c == ';') {
+        if (dataReceived.charAt(0) == 'V') {
+          int i = dataReceived.substring(2, 3).toInt();
+          vibratingMotorLastActivation[i] = millis();
+          int v = dataReceived.substring(4).toInt();
+          digitalWrite(PIN_VIBRATING_MOTOR + i, v);
+        }
+        Serial.println(dataReceived);
+        dataReceived = "";
+      }
+    } while (c != ';');
+  }
+  for (int i = 0; i < 2; i++) {
+    if ((millis() - vibratingMotorLastActivation[i]) > vibratingMaxPeriod) {
+      digitalWrite(PIN_VIBRATING_MOTOR + i, LOW);
+    }
   }
 }
 
