@@ -40,6 +40,12 @@ unsigned long buttonLastDebounceTime[12];
 int rotaryLastStateCLK[2];
 int potentiometerLastState[2];
 
+/*
+  Use to stabilize values. Data is printed/sent only if the change (increase or decrease) 
+  exceeds the threshold. The constant 8 has been defined empirically with the current hardware. 
+*/
+const int potentiometerValueThreshold = 8;
+
 unsigned long vibratingMotorLastActivation[2];
 const float vibratingMaxPeriod = 5000.0f; // 5s
 
@@ -167,11 +173,11 @@ void loop() {
   ** Potentiometers
   */
   for (int i = 0; i < 2; i++) {
-    int v = analogRead(PIN_POTENTIOMETER + i) * 100 / 1024;
-    if (v != potentiometerLastState[i]) {
-      printFormatedData('P', i, v);
+    int v = analogRead(PIN_POTENTIOMETER + i);
+    if ((v - potentiometerLastState[i]) >= potentiometerValueThreshold || (v - potentiometerLastState[i]) <= -potentiometerValueThreshold) {
+      printFormatedData('P', i, (v * 100 / 1024));
+      potentiometerLastState[i] = v;
     }
-    potentiometerLastState[i] = v;
   }
 
   /*
