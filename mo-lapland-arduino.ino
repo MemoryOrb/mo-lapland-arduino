@@ -1,6 +1,3 @@
-#include <WiFiNINA.h>
-#include "credentials.h"
-
 #define DEBOUNCE_DELAY 50
 
 /*
@@ -46,23 +43,7 @@ int potentiometerLastState[2];
 */
 const int potentiometerValueThreshold = 8;
 
-unsigned long vibratingMotorLastActivation[2];
-const float vibratingMaxPeriod = 5000.0f; // 5s
-
-/*
-  Network, define custom SECRET_SSID, SECRET_PASS, IP1, IP2, IP3 and IP4 in credentials.h
-*/
-char ssid[] = SECRET_SSID;
-char pass[] = SECRET_PASS;
-IPAddress ipRemote(IP1, IP2, IP3, IP4);
-
-unsigned int localPort = 55666;
-int status = WL_IDLE_STATUS;
-WiFiClient client;
-
-String dataSend = String("");
-String dataReceived = String("");
-
+char buf[8];
 
 void setup() {
   /*
@@ -104,27 +85,6 @@ void setup() {
   ** Init serial
   */
   Serial.begin(9600);
-
-  /*
-  ** Init network
-  */
-  while (status != WL_CONNECTED) {
-    Serial.print("Attempting to connect to SSID: ");
-    Serial.println(ssid);
-    status = WiFi.begin(ssid, pass);
-    // wait 5 seconds for connection:
-    delay(5000);
-  }
-
-  // print WiFi's IP address:
-  Serial.print("IP Address: ");
-  Serial.println(WiFi.localIP());
-
-  if (client.connect(ipRemote, localPort)) {
-    dataSend = "c:" + ipToString(WiFi.localIP()) + ";\r";
-    client.print(dataSend);
-    Serial.println("Connected");
-  }
 }
 
 void loop() {
@@ -179,69 +139,25 @@ void loop() {
       potentiometerLastState[i] = v;
     }
   }
-
-  /*
-  ** Vibrating motors
-  */
-  if (client.available()) {
-    char c;
-    do {
-      c = client.read();
-      dataReceived += c;
-      if (c == ';') {
-        if (dataReceived.charAt(0) == 'V') {
-          int i = dataReceived.substring(2, 3).toInt();
-          vibratingMotorLastActivation[i] = millis();
-          int v = dataReceived.substring(4).toInt();
-          digitalWrite(PIN_VIBRATING_MOTOR + i, v);
-        }
-        Serial.println(dataReceived);
-        dataReceived = "";
-      }
-    } while (c != ';');
-  }
-  for (int i = 0; i < 2; i++) {
-    if ((millis() - vibratingMotorLastActivation[i]) > vibratingMaxPeriod) {
-      digitalWrite(PIN_VIBRATING_MOTOR + i, LOW);
-    }
-  }
 }
 
 void printFormatedData(char componentCode, int componentNumber, bool value) {
   printFormatedDataPrefix(componentCode, componentNumber);
-  
-  Serial.print(value);
-  Serial.println(";");
-  
-  dataSend.concat(value);
-  dataSend.concat(";\r");
-  client.print(dataSend);
+
+  Serial.write(value ? "1" : "0");
+  Serial.write(";");
 }
 
 void printFormatedData(char componentCode, int componentNumber, int value) {
   printFormatedDataPrefix(componentCode, componentNumber);
-  
-  Serial.print(value);
-  Serial.println(";");
-  
-  dataSend.concat(value);
-  dataSend.concat(";\r");
-  client.print(dataSend);
+
+  Serial.write(itoa(value, buf, 10));
+  Serial.write(";");
 }
 
 void printFormatedDataPrefix(char componentCode, int componentNumber) {
-  Serial.print(componentCode);
-  Serial.print(":");
-  Serial.print(componentNumber);
-  Serial.print(":");
-
-  dataSend = "";
-  dataSend.concat(componentCode);
-  dataSend.concat(":");
-  dataSend.concat(componentNumber);
-  dataSend.concat(":");
-}
-
-String ipToString(const IPAddress& address) {
-  return String(address[0]) + "." + address[1] + "." + address[2] + "." + address[3];
+  Serial.write(componentCode);
+  Serial.write(":");
+  Serial.write(itoa(componentNumber, buf, 10));
+  Serial.write(":");
 }
