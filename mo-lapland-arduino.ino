@@ -1,29 +1,23 @@
 #define DEBOUNCE_DELAY 50
 
 /*
-  We just define the first pin number, all the other button pins follow
-  the first one, therefore, starting at 4 up to 13 (for 10 buttons).
+  We just define the first pin number, all the other button pins follow the first one
 */
-#define PIN_BUTTON_FIRST 4
+#define PIN_BUTTON_FIRST 2
 
 /*
   We just define the pins for one rotary encoder and increment (+1) for the second,
-  therefore, 0, A2 and A4 will be 1, A3 and A5
 */
 #define PIN_ROTARY_CLK 16 // A2
 #define PIN_ROTARY_DT  18 // A4
-#define PIN_ROTARY_SW  0 // TX
+#define PIN_ROTARY_SW1 0
+#define PIN_ROTARY_SW2 12
 
 /*
   Same as rotary encoder, we just define one potentiometer and increment (+1) for
   the other, therefore, 14 (A0) will be 15 (A1)
 */
 #define PIN_POTENTIOMETER 14 // A0
-
-/*
-  Same as the potentiometer, we just define one vibrating motor and incremet (+1) for the other
-*/
-#define PIN_VIBRATING_MOTOR 2
 
 /*
   12, because 10 individual buttons (momentary switches) and 2 integrated
@@ -33,13 +27,12 @@ bool buttonState[12];
 bool buttonLastState[12];
 unsigned long buttonLastDebounceTime[12];
 
-
 int rotaryLastStateCLK[2];
 int potentiometerLastState[2];
 
 /*
-  Use to stabilize values. Data is printed/sent only if the change (increase or decrease) 
-  exceeds the threshold. The constant 8 has been defined empirically with the current hardware. 
+  Use to stabilize values. Data is printed/sent only if the change (increase or decrease)
+  exceeds the threshold. The constant 8 has been defined empirically with the current hardware.
 */
 const int potentiometerValueThreshold = 8;
 
@@ -55,16 +48,19 @@ void setup() {
     buttonState[i] = digitalRead(PIN_BUTTON_FIRST + i);
   }
 
+
   /*
   ** Init rotary encoders
   */
   for (int i = 0; i < 2; i++) {
-    pinMode(PIN_ROTARY_SW + i, INPUT_PULLUP);
     pinMode(PIN_ROTARY_CLK + i, INPUT);
     pinMode(PIN_ROTARY_DT + i, INPUT);
     rotaryLastStateCLK[i] = digitalRead(PIN_ROTARY_CLK + i);
-    buttonState[i + 10] = digitalRead(PIN_ROTARY_SW + i);
   }
+  pinMode(PIN_ROTARY_SW1, INPUT_PULLUP);
+  buttonState[10] = digitalRead(PIN_ROTARY_SW1);
+  pinMode(PIN_ROTARY_SW2, INPUT_PULLUP);
+  buttonState[11] = digitalRead(PIN_ROTARY_SW2);
 
   /*
   ** Init potentiometers
@@ -72,13 +68,6 @@ void setup() {
   for (int i = 0; i < 2; i++) {
     pinMode(PIN_POTENTIOMETER + i, INPUT);
     potentiometerLastState[i] = analogRead(PIN_POTENTIOMETER + i) * 100 / 1024;
-  }
-
-  /*
-  ** Init vibrating motors
-  */
-  for (int i = 0; i < 2; i++) {
-    pinMode(PIN_VIBRATING_MOTOR + i, OUTPUT);
   }
 
   /*
@@ -92,17 +81,7 @@ void loop() {
   ** Buttons
   */
   for (int i = 0; i < 10; i++) {
-    bool b = digitalRead(i + PIN_BUTTON_FIRST);
-    if (b != buttonLastState[i]) {
-      buttonLastDebounceTime[i] = millis();
-    }
-    if ((millis() - buttonLastDebounceTime[i]) > DEBOUNCE_DELAY) {
-      if (b != buttonState[i]) {
-        buttonState[i] = b;
-        printFormatedData('B', i, b);
-      }
-    }
-    buttonLastState[i] = b;
+    checkButton(i + PIN_BUTTON_FIRST, i);
   }
 
   /*
@@ -114,19 +93,6 @@ void loop() {
       printFormatedData('R', i, (digitalRead(PIN_ROTARY_DT + i) != b));
     }
     rotaryLastStateCLK[i] = b;
-
-    // integrated button
-    bool b2 = digitalRead(PIN_ROTARY_SW + i);
-    if (b2 != buttonLastState[i + 10]) {
-      buttonLastDebounceTime[i + 10] = millis();
-    }
-    if ((millis() - buttonLastDebounceTime[i + 10]) > DEBOUNCE_DELAY) {
-      if (b2 != buttonState[i + 10]) {
-        buttonState[i + 10] = b2;
-        printFormatedData('B', i + 10, b2);
-      }
-    }
-    buttonLastState[i + 10] = b2;
   }
 
   /*
@@ -135,29 +101,45 @@ void loop() {
   for (int i = 0; i < 2; i++) {
     int v = analogRead(PIN_POTENTIOMETER + i);
     if ((v - potentiometerLastState[i]) >= potentiometerValueThreshold || (v - potentiometerLastState[i]) <= -potentiometerValueThreshold) {
-      printFormatedData('P', i, (v * 100 / 1024));
+      printFormatedData('P', i, v);
       potentiometerLastState[i] = v;
     }
   }
+  checkButton(PIN_ROTARY_SW1, 10);
+  checkButton(PIN_ROTARY_SW2, 11);
+}
+
+void checkButton(int pin, int index) {
+  bool b = digitalRead(pin);
+  if (b != buttonLastState[index]) {
+    buttonLastDebounceTime[index] = millis();
+  }
+  if ((millis() - buttonLastDebounceTime[index]) > DEBOUNCE_DELAY) {
+    if (b != buttonState[index]) {
+      buttonState[index] = b;
+      printFormatedData('B', index, b);
+    }
+  }
+  buttonLastState[index] = b;
 }
 
 void printFormatedData(char componentCode, int componentNumber, bool value) {
   printFormatedDataPrefix(componentCode, componentNumber);
 
-  Serial.write(value ? "1" : "0");
-  Serial.write(";");
+  Serial.print(value);
+  Serial.println(";");
 }
 
 void printFormatedData(char componentCode, int componentNumber, int value) {
   printFormatedDataPrefix(componentCode, componentNumber);
 
-  Serial.write(itoa(value, buf, 10));
-  Serial.write(";");
+  Serial.print(value);
+  Serial.println(";");
 }
 
 void printFormatedDataPrefix(char componentCode, int componentNumber) {
-  Serial.write(componentCode);
-  Serial.write(":");
-  Serial.write(itoa(componentNumber, buf, 10));
-  Serial.write(":");
+  Serial.print(componentCode);
+  Serial.print(":");
+  Serial.print(itoa(componentNumber, buf, 10));
+  Serial.print(":");
 }
